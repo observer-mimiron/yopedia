@@ -2,6 +2,7 @@ import { readWikiPage } from "./wiki";
 import type { IndexEntry } from "./types";
 import { BM25_K1, BM25_B, TITLE_BOOST } from "./constants";
 import { logger } from "./logger";
+import { Segment, useDefault } from "segmentit";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -25,13 +26,37 @@ const STOP_WORDS = new Set([
 // Tokenization
 // ---------------------------------------------------------------------------
 
+// Lazy-initialized jieba segmenter singleton.
+let _segment: Segment | null = null;
+function getSegment(): Segment {
+  if (!_segment) {
+    _segment = new Segment();
+    useDefault(_segment);
+  }
+  return _segment;
+}
+
+/** CJK unified ideographs range, plus Extension A. */
+const CJK_RE = /[一-鿿㐀-䶿]/;
+
 /**
  * Tokenize a string into lowercase words, filtering out stop words and
  * very short tokens.
+ *
+ * When the text contains CJK characters, uses jieba (segmentit) for
+ * Chinese-aware word segmentation. Falls back to whitespace/punctuation
+ * splitting for pure Latin text.
  */
 export function tokenize(text: string): string[] {
-  return text
-    .toLowerCase()
+  const lower = text.toLowerCase();
+  if (CJK_RE.test(lower)) {
+    const seg = getSegment();
+    return seg
+      .doSegment(lower)
+      .map((r) => r.w)
+      .filter((w) => w.trim().length >= 2 && !STOP_WORDS.has(w));
+  }
+  return lower
     .split(/[^a-z0-9]+/)
     .filter((w) => w.length >= 2 && !STOP_WORDS.has(w));
 }
