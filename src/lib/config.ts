@@ -21,6 +21,7 @@ export interface AppConfig {
   apiKey?: string;
   model?: string;
   openaiBaseUrl?: string;
+  embeddingBaseUrl?: string;
   ollamaBaseUrl?: string;
   embeddingModel?: string;
 }
@@ -78,6 +79,16 @@ export function getEmbeddingModelOverride(): string | undefined {
 export function getOpenAIBaseUrl(): string | undefined {
   const cfg = loadConfigSync();
   return process.env.OPENAI_BASE_URL ?? cfg.openaiBaseUrl ?? undefined;
+}
+
+/**
+ * Returns the effective embedding base URL.
+ * Falls back to OPENAI_BASE_URL (LLM base URL) if EMBEDDING_BASE_URL
+ * is not set — this keeps single-provider setups working without config changes.
+ */
+export function getEmbeddingBaseUrl(): string | undefined {
+  const cfg = loadConfigSync();
+  return process.env.EMBEDDING_BASE_URL ?? cfg.embeddingBaseUrl ?? getOpenAIBaseUrl() ?? undefined;
 }
 
 /**

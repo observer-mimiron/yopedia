@@ -10,7 +10,7 @@ import {
   loadConfigSync,
   getEmbeddingModelOverride,
   getOllamaBaseUrl,
-  getOpenAIBaseUrl,
+  getEmbeddingBaseUrl,
 } from "./config";
 import { withFileLock } from "./lock";
 import { isEnoent } from "./errors";
@@ -84,6 +84,12 @@ export function getEmbeddingModelName(): string | null {
   const env = detectEnvProvider();
   const cfg = loadConfigSync();
 
+  // --- EMBEDDING_API_KEY: standalone embedding provider (independent of LLM) ---
+  const embeddingApiKey = process.env.EMBEDDING_API_KEY;
+  if (embeddingApiKey) {
+    return resolveEmbeddingModelName("openai", cfg);
+  }
+
   // --- Env var path: embedding-capable provider detected via env ---
   if (env.provider && EMBEDDING_CAPABLE_PROVIDERS.has(env.provider)) {
     return resolveEmbeddingModelName(env.provider, cfg);
@@ -119,6 +125,13 @@ export function getEmbeddingModel(): EmbeddingModel | null {
   const env = detectEnvProvider();
   const cfg = loadConfigSync();
 
+  // --- EMBEDDING_API_KEY: standalone embedding provider (independent of LLM) ---
+  const embeddingApiKey = process.env.EMBEDDING_API_KEY;
+  if (embeddingApiKey) {
+    const modelName = resolveEmbeddingModelName("openai", cfg);
+    return _createEmbeddingModel("openai", embeddingApiKey, modelName);
+  }
+
   // --- Env var path: embedding-capable provider detected via env ---
   if (env.provider && EMBEDDING_CAPABLE_PROVIDERS.has(env.provider)) {
     const modelName = resolveEmbeddingModelName(env.provider, cfg);
@@ -152,7 +165,7 @@ function _createEmbeddingModel(
 ): EmbeddingModel | null {
   switch (provider) {
     case "openai": {
-      const baseURL = getOpenAIBaseUrl();
+      const baseURL = getEmbeddingBaseUrl();
       const openai = baseURL
         ? createOpenAI({ apiKey: apiKey!, baseURL })
         : createOpenAI({ apiKey: apiKey! });
