@@ -11,6 +11,7 @@ import { searchByVector } from "./embeddings";
 import { callLLM, hasLLMKey } from "./llm";
 import { MAX_CONTEXT_PAGES, RRF_K } from "./constants";
 import { logger } from "./logger";
+import { logger } from "./logger";
 import type { IndexEntry } from "./types";
 
 // ---------------------------------------------------------------------------
@@ -186,12 +187,22 @@ export async function searchIndex(
     // Vector search failure is non-fatal — fall back to BM25 only
   }
 
+  // === Search diagnostics logging ===
+  logger.info("search", `Query: "${question}" — tokens: [${questionTokens.join(", ")}]`);
+  logger.info("search", `BM25 hits (${bm25Results.length}): ${bm25Results.slice(0, 5).map(r => `${r.slug}(${r.score.toFixed(2)})`).join(", ")}`);
+  if (vectorResults.length > 0) {
+    logger.info("search", `Vector hits (${vectorResults.length}): ${vectorResults.slice(0, 5).map(r => `${r.slug}(${(r.score * 100).toFixed(1)}%)`).join(", ")}`);
+  } else {
+    logger.info("search", "Vector search: no embeddings configured");
+  }
+
   // Phase 1c — Combine via RRF if we have vector results, otherwise pure BM25
   // Keep a wider candidate pool for re-ranking input
   let fusedSlugs: string[];
   if (vectorResults.length > 0) {
     const fused = reciprocalRankFusion(bm25Results, vectorResults);
     fusedSlugs = fused.slice(0, RERANK_CANDIDATE_POOL).map((r) => r.slug);
+    logger.info("search", `RRF fused (top 5): ${fused.slice(0, 5).map(r => `${r.slug}(${r.score.toFixed(4)})`).join(", ")}`);
   } else {
     fusedSlugs = bm25Results.slice(0, RERANK_CANDIDATE_POOL).map((r) => r.slug);
   }
