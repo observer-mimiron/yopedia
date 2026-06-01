@@ -233,6 +233,14 @@ function getModel() {
       return anthropic(model);
     }
     case "openai": {
+      if (creds.openaiBaseUrl) {
+        const openai = createOpenAI({
+          apiKey: creds.apiKey!,
+          baseURL: creds.openaiBaseUrl,
+        });
+        return openai.chat(model);
+      }
+
       const openai = createOpenAI({ apiKey: creds.apiKey! });
       return openai(model);
     }

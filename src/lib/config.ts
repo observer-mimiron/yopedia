@@ -20,6 +20,7 @@ export interface AppConfig {
   provider?: "anthropic" | "openai" | "google" | "ollama";
   apiKey?: string;
   model?: string;
+  openaiBaseUrl?: string;
   ollamaBaseUrl?: string;
   embeddingModel?: string;
 }
@@ -71,6 +72,12 @@ export function getConfigPath(): string {
 /** Returns the `EMBEDDING_MODEL` env override, or `undefined` if not set. */
 export function getEmbeddingModelOverride(): string | undefined {
   return process.env.EMBEDDING_MODEL;
+}
+
+/** Returns the effective OpenAI-compatible base URL, if configured. */
+export function getOpenAIBaseUrl(): string | undefined {
+  const cfg = loadConfigSync();
+  return process.env.OPENAI_BASE_URL ?? cfg.openaiBaseUrl ?? undefined;
 }
 
 /**
@@ -343,6 +350,7 @@ export interface ResolvedCredentials {
   provider: string | null;
   apiKey: string | null;
   model: string | null;
+  openaiBaseUrl: string | null;
   ollamaBaseUrl: string | null;
 }
 
@@ -356,7 +364,13 @@ export function getResolvedCredentials(): ResolvedCredentials {
 
   const provider = env.provider ?? cfg.provider ?? null;
   if (!provider) {
-    return { provider: null, apiKey: null, model: null, ollamaBaseUrl: null };
+    return {
+      provider: null,
+      apiKey: null,
+      model: null,
+      openaiBaseUrl: null,
+      ollamaBaseUrl: null,
+    };
   }
 
   // API key: env wins
@@ -386,6 +400,7 @@ export function getResolvedCredentials(): ResolvedCredentials {
 
   // Ollama base URL
   const ollamaBaseUrl = process.env.OLLAMA_BASE_URL ?? cfg.ollamaBaseUrl ?? null;
+  const openaiBaseUrl = process.env.OPENAI_BASE_URL ?? cfg.openaiBaseUrl ?? null;
 
-  return { provider, apiKey, model, ollamaBaseUrl };
+  return { provider, apiKey, model, openaiBaseUrl, ollamaBaseUrl };
 }

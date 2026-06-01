@@ -5,7 +5,13 @@ import { createOllama } from "ollama-ai-provider-v2";
 import type { EmbeddingModel } from "ai";
 import { wikiRelPath, listWikiPages, readWikiPage } from "./wiki";
 import { getStorage } from "./storage";
-import { detectEnvProvider, loadConfigSync, getEmbeddingModelOverride, getOllamaBaseUrl } from "./config";
+import {
+  detectEnvProvider,
+  loadConfigSync,
+  getEmbeddingModelOverride,
+  getOllamaBaseUrl,
+  getOpenAIBaseUrl,
+} from "./config";
 import { withFileLock } from "./lock";
 import { isEnoent } from "./errors";
 import { MAX_EMBED_CHARS } from "./constants";
@@ -146,7 +152,10 @@ function _createEmbeddingModel(
 ): EmbeddingModel | null {
   switch (provider) {
     case "openai": {
-      const openai = createOpenAI({ apiKey: apiKey! });
+      const baseURL = getOpenAIBaseUrl();
+      const openai = baseURL
+        ? createOpenAI({ apiKey: apiKey!, baseURL })
+        : createOpenAI({ apiKey: apiKey! });
       return openai.embedding(modelName);
     }
     case "google": {
