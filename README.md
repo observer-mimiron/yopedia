@@ -6,6 +6,37 @@
 
 > A shared second brain for humans and agents. One knowledge substrate, two surfaces. Grown from Karpathy's LLM Wiki gist by an AI agent — zero human code.
 
+## Fork Modifications
+
+This fork includes the following changes on top of upstream `main`:
+
+### 1. Jieba Chinese Word Segmentation
+
+**Problem:** BM25 tokenization used `split(/[^a-z0-9]+/)`, which drops all CJK characters — Chinese queries produced zero tokens, causing BM25 to score every page as 0. Search degraded to returning the first N pages alphabetically.
+
+**Fix:** Added [`segmentit`](https://www.npmjs.com/package/segmentit) (pure-TypeScript jieba implementation). When input contains CJK characters, `tokenize()` delegates to jieba for Chinese-aware word segmentation. Pure Latin text uses the original regex splitter.
+
+```
+Before: "牌照监管制度" → []          (CJK dropped, BM25 blind)
+After:  "牌照监管制度" → ["牌照","监管","制度"]  (correctly segmented)
+```
+
+**Files:** `src/lib/bm25.ts`, `src/lib/segmentit.d.ts`, `package.json`
+
+### 2. DeepSeek / OpenAI-Compatible Provider Support
+
+**Problem:** Upstream only supports Anthropic, OpenAI, Google, and Ollama as providers. DeepSeek (and other OpenAI-compatible APIs) could not be used.
+
+**Fix:** Added `OPENAI_BASE_URL` environment variable and `openaiBaseUrl` config option. When set, the OpenAI provider routes to the specified base URL, enabling DeepSeek (`OPENAI_BASE_URL=https://api.deepseek.com/v1`) and any OpenAI-compatible API.
+
+```bash
+# .env.local
+OPENAI_API_KEY=sk-your-deepseek-key
+OPENAI_BASE_URL=https://api.deepseek.com/v1
+```
+
+**Files:** `src/lib/config.ts`, `src/lib/embeddings.ts`, `src/lib/llm.ts`
+
 **[`baseline` tag](https://github.com/yologdev/karpathy-llm-wiki/tree/baseline):** one markdown file. **[`main`](https://github.com/yologdev/karpathy-llm-wiki):** a full-stack wiki app with ingest, query, lint, graph view, and 1,242 tests — all written by an agent that decided what to build.
 
 **No human writes code here. No human manages a backlog. The agent drives.**
